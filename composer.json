@@ -1,21 +1,22 @@
 {
     "name": "clembet/omnipay-moip",
-    "description": "MOIP API 3.0 driver for Omnipay",
+    "description": "MOIP driver for Omnipay 3.0",
     "type": "library",
     "keywords": [
         "gateway",
         "moip",
-	"wirecardBrazil",
+        "wirecardBrazil",
         "omnipay",
         "payment"
     ],
     "homepage": "https://github.com/clembet/omnipay-moip",
     "require": {
         "php": ">=7.0",
-        "omnipay/common": "^3.0"
+        "clembet/omnipay-common": "^3.0",
+        "moip/moip-sdk-php": "^3.1"
     },
     "require-dev": {
-        "omnipay/tests": "~3.0"
+        "clembet/omnipay-tests": "~3.0"
     },
     "license": "MIT",
     "authors": [
