@@ -20,7 +20,7 @@ class Response extends AbstractResponse
         return false;
     }
 
-    public function getTransactionId()
+    public function getTransactionID()
     {
         if(isset($this->data['payment_id'])) {
             return $this->data['payment_id'];
@@ -29,7 +29,7 @@ class Response extends AbstractResponse
         return null;
     }
 
-    public function getTransactionReference()
+    public function getTransactionAuthorizationCode()
     {
         if(isset($this->data['payment_id'])) {
             return $this->data['payment_id'];

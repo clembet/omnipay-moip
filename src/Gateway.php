@@ -101,6 +101,11 @@ class Gateway extends AbstractGateway
         return $this->getParameter('ownId');
     }
 
+    public function parseResponse($data)
+    {
+        $request = $this->createRequest('\Omnipay\Moip\Message\PurchaseRequest', []);
+        return new \Omnipay\Moip\Message\Response($request, (array)$data);
+    }
 
     /**
      * Create request for to consume service

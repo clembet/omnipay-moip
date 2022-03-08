@@ -348,6 +348,43 @@ twIDAQAB
         return $this->setParameter('shippingAmount', $value);
     }
 
+    public function getPaymentType()
+    {
+        return $this->getParameter('paymentType');
+    }
+
+    public function setPaymentType($value)
+    {
+        $this->setParameter('paymentType', $value);
+    }
+
+    public function getDueDate()
+    {
+        $dueDate = $this->getParameter('dueDate');
+        if($dueDate)
+            return $dueDate;
+
+        $time = localtime(time());
+        $ano = $time[5]+1900;
+        $mes = $time[4]+1+1;
+        $dia = 1;// $time[3];
+        if($mes>12)
+        {
+            $mes=1;
+            ++$ano;
+        }
+
+        $dueDate = sprintf("%04d-%02d-%02d", $ano, $mes, $dia);
+        $this->setDueDate($dueDate);
+
+        return $dueDate;
+    }
+
+    public function setDueDate($value)
+    {
+        return $this->setParameter('dueDate', $value);
+    }
+
     /**
      * Don't throw exceptions for 4xx errors
      */
