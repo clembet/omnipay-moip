@@ -1,9 +1,8 @@
-<?php
+<?php namespace Omnipay\Moip\Message;
 
-namespace Omnipay\Moip\Message;
-
-use Moip\Moip;
-use Moip\Auth\BasicAuth;
+use Exception;
+//use Moip\Moip;
+//use Moip\Auth\BasicAuth;
 
 abstract class AbstractRequest extends \Omnipay\Common\Message\AbstractRequest
 {
@@ -17,20 +16,23 @@ Gp+TKdMhAz4IkqiSXiw6+eYpSAfvevhg7CC7UYeb427wFYAhExFtx+d+JhCA70yM
 twIDAQAB
 -----END PUBLIC KEY-----';
 
-    //https://dev.wirecard.com.br/docs/protocolo-seguranca
-    /**
-     * Live Endpoint URL
-     *
-     * @var string URL
-     */
-    //protected $liveEndpoint = 'https://api.moip.com.br/v2';
 
-    /**
-     * Test Endpoint URL
-     *
-     * @var string URL
-     */
-    //protected $testEndpoint = 'https://sandbox.moip.com.br/v2';
+    protected $liveEndpoint = 'https://api.moip.com.br';
+    protected $testEndpoint = 'https://sandbox.moip.com.br';  //https://sandbox-tls.moip.com.br (v1)
+    protected $version = 2;
+    protected $requestMethod = 'POST';
+    protected $resource = '';
+
+    
+    public function setToken($token)
+    {
+        $this->setParameter('token', $token);
+    }
+
+    public function getToken()
+    {
+        return $this->getParameter('token');
+    }
 
     /**
      * Set api key authentication service
@@ -52,67 +54,118 @@ twIDAQAB
         return $this->getParameter('apiKey');
     }
 
+    public function getData()
+    {
+        $this->validate('token', 'apiKey');
+
+        return [
+        ];
+    }
+
     /**
      * @param mixed $data
      *
      * @return \Omnipay\Common\Message\ResponseInterface|\Omnipay\Moip\Message\Response
      */
-    public function sendData($data)
+    /*public function sendData($data)
     {
         $moip = new Moip(new BasicAuth($this->getToken(), $this->getApiKey()), $this->getEndpoint());
+    }*/
+
+    public function sendData($data)
+    {
+        $this->validate('authorization');
+        $method = $this->requestMethod;
+        $url = $this->getEndpoint();
+
+        $headers = [
+            'Content-Type' => 'application/json',
+            //'Authorization' => 'Basic '.$this->encodeCredentials($this->getToken(), $this->getApiKey()),
+            'Authorization' => $this->getAuthorization(),
+        ];
+
+        //print_r([$method, $url, $headers, json_encode($data)]);exit();
+        $response = $this->httpClient->request(
+            $method,
+            $url,
+            $headers,
+            $this->toJSON($data)
+            //http_build_query($data, '', '&')
+        );
+        //print_r($response);
+        //print_r($data);
+
+        if ($response->getStatusCode() != 200 && $response->getStatusCode() != 201 && $response->getStatusCode() != 400) {
+            $array = [
+                'error' => [
+                    'code' => $response->getStatusCode(),
+                    'message' => $response->getReasonPhrase()
+                ]
+            ];
+
+            return $this->response = $this->createResponse($array);
+        }
+
+        $json = $response->getBody()->getContents();
+        $array = @json_decode($json, true);
+        //print_r($array);
+
+        return $this->response = $this->createResponse(@$array);
     }
 
-    /**
-     * Verify environment of the service payment and return correct endpoint url
-     *
-     * @return string
-     */
-    protected function getEndpoint()
+    protected function setBaseEndpoint($value)
     {
-        return $this->getTestMode() ? $this->getTestEndpoint() : $this->getLiveEndpoint();
+        $this->baseEndpoint = $value;
     }
 
-    /**
-     * @param $data
-     *
-     * @return \Omnipay\Moip\Message\Response
-     */
-    protected function createResponse($data)
+    protected function setRequestMethod($value)
     {
-        return $this->response = new Response($this, $data);
+        return $this->requestMethod = $value;
     }
 
-    /**
-     * Get HTTP Method.
-     *
-     * This is nearly always POST but can be over-ridden in sub classes.
-     *
-     * @return string the HTTP method
-     */
-    protected function getHttpMethod()
+    public function setAccessToken($value)
     {
-        return 'POST';
+        return $this->setParameter('accessToken', $value);
     }
 
-    /**
-     * Return production environment url of service
-     *
-     * @return string
-     */
-    private function getLiveEndpoint()
+    public function getAccessToken()
     {
-        return Moip::ENDPOINT_PRODUCTION;
+        return $this->getParameter('accessToken');
     }
 
-    /**
-     * Return test environment url of service
-     *
-     * @return string
-     */
-    private function getTestEndpoint()
+    public function setAuthorization($value)
     {
-        return Moip::ENDPOINT_SANDBOX;
+        return $this->setParameter('authorization', $value);
     }
+
+    public function getAuthorization()
+    {
+        return $this->getParameter('authorization');
+    }
+
+    public function encodeCredentials($token, $appKey)
+    {
+        return base64_encode($token . ':' . $appKey);
+    }
+
+    public function setSoftDescriptor($value)
+    {
+        return $this->setParameter('soft_descriptor', $value);
+    }
+    public function getSoftDescriptor()
+    {
+        return $this->getParameter('soft_descriptor');
+    }
+
+    public function setFingerPrint($value)
+    {
+        return $this->setParameter('fingerPrint', $value);
+    }
+    public function getFingerPrint()
+    {
+        return $this->getParameter('fingerPrint');
+    }
+
 
     /**
      * Get the customer reference.
@@ -167,26 +220,6 @@ twIDAQAB
     public function setOrderId($value)
     {
         return $this->setParameter('order_id', $value);
-    }
-
-    /**
-     * Set card hash
-     *
-     * @param string $hash
-     */
-    public function setCardHash($hash)
-    {
-        $this->setParameter('cardHash', $hash);
-    }
-
-    /**
-     * Get card hash
-     *
-     * @return string
-     */
-    public function getCardHash()
-    {
-        return $this->getParameter('cardHash');
     }
 
     /**
@@ -251,76 +284,11 @@ twIDAQAB
     public function getInstructionLinesThird()
     {
         return $this->getParameter('instructionLinesThird');
-    }
+    }    
 
-    /**
-     * Get the card data.
-     *
-     * Because the stripe gateway uses a common format for passing
-     * card data to the API, this function can be called to get the
-     * data from the associated card object in the format that the
-     * API requires.
-     *
-     * @return array
-     * @throws \Omnipay\Common\Exception\InvalidCreditCardException
-     */
-    protected function getCardData()
+    public function __get($name)
     {
-        $card = $this->getCard();
-        $card->validate();
-
-        $data = [];
-        if($this->getCardHash()) {
-            $data['hash'] = $this->getCardHash();
-        } else {
-            $data['number'] = $card->getNumber();
-            $data['expirationMonth'] = $card->getExpiryMonth();
-            $data['expirationYear'] = $card->getExpiryYear();
-            $data['installments'] = $this->getInstallments();
-            if ($card->getCvv()) {
-                $data['cvc'] = $card->getCvv();
-            }
-        }
-
-        //$data['shippingAmount'] = $this->getShippingAmount();
-
-        $customer['name'] = $card->getName();
-        $customer['firstName'] = $card->getShippingFirstName();
-        $customer['lastName'] = $card->getShippingLastName();
-        $customer['birthday'] = $card->getBirthday();
-        $customer['email'] = $card->getEmail();
-        $customer['phone'] = $card->getPhone();
-        $customer['doc'] = $card->getHolderDocumentNumber();
-        $customer['address_line1'] = $card->getAddress1();
-        $customer['address_line2'] = $card->getAddress2();
-        $customer['address_number'] = $card->getBillingNumber();
-        $customer['address_city'] = $card->getCity();
-        $customer['address_district'] = $card->getBillingDistrict();
-        $customer['address_zip'] = $card->getPostcode();
-        $customer['address_state'] = $card->getState();
-        $customer['address_country'] = $card->getCountry();
-
-        $data['customer'] = $customer;
-
-        return $data;
-    }
-
-    public function getBoletoData()
-    {
-        $this->validate('expirationDate', 'instructionLinesFirst');
-        $data = [];
-
-        $data['expirationDate'] = $this->getExpirationDate();
-        $data['instructionLines'] = [];
-        $data['instructionLines']['first'] = $this->getInstructionLinesFirst();
-        if($this->getInstructionLinesSecond()) {
-            $data['instructionLines']['second'] = $this->getInstructionLinesSecond();
-        }
-        if($this->getInstructionLinesThird()) {
-            $data['instructionLines']['third'] = $this->getInstructionLinesThird();
-        }
-
-        return $data;
+        return $this->getParameter($name);
     }
 
     protected function decode($data)
@@ -338,14 +306,14 @@ twIDAQAB
         return $this->setParameter('installments', $value);
     }
 
-    public function getShippingAmount()
+    public function getShippingPrice()
     {
-        return $this->getParameter('shippingAmount');
+        return $this->getParameter("shipping_price");
     }
 
-    public function setShippingAmount($value)
+    public function setShippingPrice($value)
     {
-        return $this->setParameter('shippingAmount', $value);
+        return $this->setParameter("shipping_price", $value);
     }
 
     public function getPaymentType()
@@ -358,6 +326,46 @@ twIDAQAB
         $this->setParameter('paymentType', $value);
     }
 
+    
+
+    public function toJSON($data, $options = 0)
+    {
+        if (version_compare(phpversion(), '5.4.0', '>=') === true) {
+            return json_encode($data, $options | 64);
+        }
+        return str_replace('\\/', '/', json_encode($data, $options));
+    }
+
+    public function getTransactionID()
+    {
+        return $this->getParameter('transactionId');
+    }
+
+    public function setTransactionID($value)
+    {
+        return $this->setParameter('transactionId', $value);
+    }
+
+    /**
+     * Set client Id
+     *
+     * @param string $ownId
+     */
+    public function setCustomerOwnId($ownId)
+    {
+        $this->setParameter('customerOwnId', $ownId);
+    }
+
+    /**
+     * Get client Id
+     *
+     * @return string $ownId
+     */
+    public function getCustomerOwnId()
+    {
+        return $this->getParameter('customerOwnId');
+    }
+    
     public function getDueDate()
     {
         $dueDate = $this->getParameter('dueDate');
@@ -385,18 +393,227 @@ twIDAQAB
         return $this->setParameter('dueDate', $value);
     }
 
-    /**
-     * Don't throw exceptions for 4xx errors
-     */
-    private function addListener4xxErrors()
+    public function getResource()
     {
-        $this->httpClient->getEventDispatcher()->addListener(
-            'request.error',
-            function ($event) {
-                if ($event['response']->isClientError()) {
-                    $event->stopPropagation();
-                }
+        return $this->resource;
+    }
+
+    public function getVersion()
+    {
+        return $this->version;
+    }
+
+    public function getMethod()
+    {
+        return $this->requestMethod;
+    }
+
+    protected function createResponse($data)
+    {
+        return $this->response = new Response($this, $data);
+    }
+
+    protected function getEndpoint()
+    {
+        $version = $this->getVersion();
+        $endPoint = ($this->getTestMode()?$this->testEndpoint:$this->liveEndpoint);
+        return  "{$endPoint}/v{$version}/{$this->getResource()}";
+    }
+
+    public function getDataCreditCard()
+    {
+        $this->validate('card', 'customer', 'fingerPrint');
+        $card = $this->getCard();
+        $card->validate('number_token');
+        $customer = $this->getCustomer();
+        $card->validate();
+
+        $data = [
+            "installmentCount"=>$this->getInstallments(),
+            "statementDescriptor"=>$this->getSoftDescriptor(),
+            "fundingInstrument"=>[
+                "method"=>"CREDIT_CARD",
+                "creditCard"=>[
+                    "hash"=> $card->getNumberToken(),
+                    "store"=>false,
+                    "holder"=>[
+                        "fullname"=>$card->getName(),
+                        "birthdate"=>$card->getBirthday(),
+                        "taxDocument"=>[
+                            "type"=>"CPF",
+                            "number"=>$card->getHolderDocumentNumber()
+                        ],
+                        "phone"=>[
+                            "countryCode"=>"55",
+                            "areaCode"=>substr($card->getPhone(), 0, 2),
+                            "number"=>substr($card->getPhone(), 2)
+                        ],
+                        "billingAddress"=>[
+                            "city"=>$card->getShippingCity(),
+                            "district"=>$card->getShippingDistrict(),
+                            "street"=>$card->getShippingAddress1(),
+                            "streetNumber"=>$card->getShippingNumber(),
+                            "zipCode"=>$card->getShippingPostcode(),
+                            "state"=>$card->getShippingState(),
+                            "country"=>$card->getShippingCountry()
+                        ]
+                    ]
+                ]
+            ],
+            "device"=>[
+                "ip"=>$this->getClientIp(),
+                /*"geolocation"=>[
+                    "latitude"=>-33.867,
+                    "longitude"=>151.206
+                ],*/
+                "userAgent"=>@$_SERVER['HTTP_USER_AGENT']?@$_SERVER['HTTP_USER_AGENT']:"Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.7) Gecko/20040803 Firefox/0.9.3",
+                "fingerprint"=>$this->getFingerPrint()
+            ]
+        ];
+
+        /*  só é permitido enviar dados do cartão se houve certificação PCI
+        if($this->getCardHash()) {
+            $data['fundingInstrument']['creditCard']['hash'] = $this->getCardHash();
+        } else {
+            $data['fundingInstrument']['creditCard']['number'] = $card->getNumber();
+            $data['fundingInstrument']['creditCard']['expirationMonth'] = $card->getExpiryMonth();
+            $data['fundingInstrument']['creditCard']['expirationYear'] = $card->getExpiryYear();
+            //$data['fundingInstrument']['creditCard']['installments'] = $this->getInstallments();
+            if ($card->getCvv()) {
+                $data['fundingInstrument']['creditCard']['cvc'] = $card->getCvv();
             }
-        );
+        }*/
+
+        return $data;
+    }
+
+    public function getDataBoleto()
+    {
+        $this->validate('dueDate', 'customer');
+        $data = [
+            "statementDescriptor"=>$this->getSoftDescriptor(),
+            "fundingInstrument"=>[
+                "method"=>"BOLETO",
+                "boleto"=>[
+                    "expirationDate"=>$this->getDueDate(),
+                    "instructionLines"=>[
+                        "first"=>"Não receber após o vencimento",
+                        "second"=>"",
+                        "third"=>""
+                    ],
+                    "logoUri"=>"http://"
+                ]
+            ]
+        ];
+
+        return $data;
+    }
+
+    public function getDataPix()
+    {
+        $data = [];
+        return $data;
+    }
+
+    public function setOwnId($ownId)
+    {
+        $this->setParameter('ownId', $ownId);
+    }
+
+    public function getOwnId()
+    {
+        return $this->getParameter('ownId');
+    }
+
+    public function setOrderOwnId($ownId)
+    {
+        $this->setParameter('orderOwnId', $ownId);
+    }
+
+    public function getOrderOwnId()
+    {
+        return $this->getParameter('orderOwnId');
+    }
+
+    public function getClientIp()
+    {
+        $ip = $this->getParameter('clientIp');
+        if($ip)
+            return $ip;
+
+        $ip = "127.0.0.1";
+        if(!empty($_SERVER['HTTP_CLIENT_IP'])){
+            //ip from share internet
+            $ip = @$_SERVER['HTTP_CLIENT_IP'];
+        }elseif(!empty($_SERVER['HTTP_X_FORWARDED_FOR'])){
+            //ip pass from proxy
+            $ip = @$_SERVER['HTTP_X_FORWARDED_FOR'];
+        }elseif(!empty($_SERVER['HTTP_X_FORWARDED'])){
+            //ip pass from proxy
+            $ip = @$_SERVER['HTTP_X_FORWARDED'];
+        }elseif(!empty($_SERVER['HTTP_FORWARDED'])){
+            //ip pass from proxy
+            $ip = @$_SERVER['HTTP_FORWARDED'];
+        }elseif(!empty($_SERVER['REMOTE_ADDR'])){
+            $ip = @$_SERVER['REMOTE_ADDR'];
+        }
+
+        return $ip;
+    }
+
+    public function getCustomer()
+    {
+        return $this->getParameter('customer');
+    }
+
+    public function setCustomer($value)
+    {
+        return $this->setParameter('customer', $value);
+    }
+
+    public function getItemData()
+    {
+        $data = [];
+        $items = $this->getItems();
+
+        if ($items) {
+            foreach ($items as $n => $item) {
+                $item_array = [];
+                $item_array['id'] = $n+1;
+                $item_array['title'] = $item->getName();
+                $item_array['description'] = $item->getName();
+                //$item_array['category_id'] = $item->getCategoryId();
+                $item_array['quantity'] = (int)$item->getQuantity();
+                //$item_array['currency_id'] = $this->getCurrency();
+                $item_array['unit_price'] = (double)($this->formatCurrency($item->getPrice()));
+
+                array_push($data, $item_array);
+            }
+        }
+
+        return $data;
+    }
+
+    //https://paragonie.com/blog/2018/04/protecting-rsa-based-protocols-against-adaptive-chosen-ciphertext-attacks#rsa-doing-it-right
+    //https://www.phpclasses.org/package/9206-PHP-Generate-RSA-keys-and-encrypt-data-using-OpenSSL.html
+    //https://ebckurera.wordpress.com/2017/06/22/rsa-cryptography-in-php-how-to/
+    function rsa_encrypt($data, $pubkey)
+    {
+        if (openssl_public_encrypt($data, $encrypted, $pubkey))
+            $data = base64_encode($encrypted);
+        else
+            throw new Exception('Unable to encrypt data. Perhaps it is bigger than the key size?');
+
+        return $data;
+    }
+
+    function rsa_decrypt($data, $privkey)
+    {
+        if (openssl_private_decrypt(base64_decode($data), $decrypted, $privkey))
+            $data = $decrypted;
+        else
+            $data = '';
+
+        return $data;
     }
 }

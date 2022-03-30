@@ -1,6 +1,4 @@
-<?php
-
-namespace Omnipay\Moip\Message;
+<?php namespace Omnipay\Moip\Message;
 
 
 use Omnipay\Common\Message\AbstractResponse;
@@ -14,7 +12,11 @@ class Response extends AbstractResponse
      */
     public function isSuccessful()
     {
-        if(isset($this->data['status']) && isset($this->data['created_at']))
+        if(isset($this->data['status']) && isset($this->data['createdAt']))
+            return true;
+
+        // customer
+        if(isset($this->data['id']) && isset($this->data['ownId']) && isset($this->data['createdAt']))
             return true;
 
         return false;
@@ -22,8 +24,8 @@ class Response extends AbstractResponse
 
     public function getTransactionID()
     {
-        if(isset($this->data['payment_id'])) {
-            return $this->data['payment_id'];
+        if(isset($this->data['id'])) {
+            return $this->data['id'];
         }
 
         return null;
@@ -31,8 +33,17 @@ class Response extends AbstractResponse
 
     public function getTransactionAuthorizationCode()
     {
-        if(isset($this->data['payment_id'])) {
-            return $this->data['payment_id'];
+        if(isset($this->data['acquirerDetails']['authorizationNumber'])) {
+            return $this->data['acquirerDetails']['authorizationNumber'];
+        }
+
+        return null;
+    }
+
+    public function getResponseID()
+    {
+        if(isset($this->data['id'])) {
+            return $this->data['id'];
         }
 
         return null;
@@ -76,107 +87,89 @@ class Response extends AbstractResponse
         return isset($this->data['status']) ? $this->data['status'] : null;
     }
 
-    /**
-     * @return bool
-     */
-    public function isCreated()
+    private function get($key, $default = null)
     {
-        return $this->getStatus() === 'CREATED';
+        return isset($this->data[$key])
+               ? $this->data[$key]
+               : (isset($this->data['authorization'][$key])
+                  ? $this->data['authorization'][$key]
+                  : $default);
+
     }
 
-    /**
-     * @return bool
-     */
-    public function isWaiting()
+    public function isPaid()
     {
-        return $this->getStatus() === 'WAITING';
+        $status = @strtolower($this->getStatus());
+        return (strcmp("authorized", $status)==0 || strcmp("settled", $status)==0);
     }
 
-    /**
-     * @return bool
-     */
-    /*public function isPaid()
-    {
-        return $this->getStatus() === 'PAID';
-    }*/
-
-    /**
-     * @return bool
-     */
-    /*public function isNotPaid()
-    {
-        return $this->getStatus() === 'NOT_PAID';
-    }*/
-
-    /**
-     * @return bool
-     */
-    /*public function isReverted()
-    {
-        return $this->getStatus() === 'REVERTED';
-    }*/
-
-    /**
-     * @return bool
-     */
-    public function isInAnalysis()
-    {
-        return $this->getStatus() === 'IN_ANALYSIS';
-    }
-
-    /**
-     * @return bool
-     */
-    public function isPreAuthorized()
-    {
-        return $this->getStatus() === 'PRE_AUTHORIZED';
-    }
-
-    /**
-     * @return bool
-     */
     public function isAuthorized()
     {
-        return $this->getStatus() === 'AUTHORIZED';
+        $status = @strtolower($this->getStatus());
+        return strcmp("pre_authorized", $status)==0;
     }
 
-    /**
-     * @return bool
-     */
-    public function isCancelled()
+    public function isPending()
     {
-        return $this->getStatus() === 'CANCELLED';
+        $status = @strtolower($this->getStatus());
+        return (strcmp("waiting", $status)==0 || strcmp("in_analysis", $status)==0 || strcmp("created", $status)==0);
     }
 
-    /**
-     * @return bool
-     */
-    /*public function isRefunded()
+    public function isVoided()
     {
-        return $this->getStatus() === 'REFUNDED';
-    }*/
-
-    /**
-     * @return bool
-     */
-    public function isReversed()
-    {
-        return $this->getStatus() === 'REVERSED';
+        $status = @strtolower($this->getStatus());
+        return strcmp("cancelled", $status)==0 || strcmp("refunded", $status)==0;
     }
 
-    /**
-     * @return bool
-     */
-    public function isSettled()
+    public function getCode()
     {
-        return $this->getStatus() === 'SETTLED';
+        return $this->get('returnCode');
     }
 
-    /**
-     * @return array|null [['code' => 'ORD-001', 'path' => 'ownId', 'description' => 'Error message']]
-     */
     public function getErrors()
     {
         return (isset($this->data['errors'])) ? $this->data['errors'] : null;
+    }
+
+    /**
+     * Get the error message from the response.
+     *
+     * Returns null if the request was successful.
+     *
+     * @return string|null
+     */
+    public function getMessage()
+    {
+        return $this->getCode()." - ".$this->getErrors();
+
+    }
+
+    public function getBoleto()
+    {
+        $data = $this->getData();
+        $boleto = array();
+        $payment_id = @$data['payment_id'];
+        $endpoint = $this->getTestMode()?$this->testEndpoint:$this->liveEndpoint;
+        $boleto['boleto_url'] = "$endpoint/v1/payments/boleto/$payment_id/html";//@$data['boleto']['links'][0]['href']; //'https://api-sandbox.getnet.com.br/v1/payments/boleto/{payment_id}/html'
+        $boleto['boleto_url_pdf'] = "$endpoint/v1/payments/boleto/$payment_id/pdf";//@$data['boleto']['links'][0]['href'];  //'https://api-sandbox.getnet.com.br/v1/payments/boleto/{payment_id}/pdf'
+        $boleto['boleto_barcode'] = @$data['boleto']['typeful_line'];
+        $boleto['boleto_expiration_date'] = @$data['boleto']['expiration_date'];
+        $boleto['boleto_valor'] = (@$data['amount']*1.0)/100.0;
+        $boleto['boleto_transaction_id'] = @$data['boleto']['boleto_id'];//@$data['payment_id']
+        //@$this->setTransactionReference(@$data['transaction_id']);
+
+        return $boleto;
+    }
+
+    public function getPix()
+    {
+        $data = $this->getData();
+        $pix = array();
+        $pix['pix_qrcodebase64image'] = $this->createPixImg(@$data['additional_data']['qr_code']);
+        $pix['pix_qrcodestring'] = @$data['additional_data']['qr_code'];
+        $pix['pix_valor'] = NULL;//(@$data['amount']*1.0)/100.0;
+        $pix['pix_transaction_id'] = @$data['payment_id'];
+
+        return $pix;
     }
 }

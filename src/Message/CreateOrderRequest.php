@@ -1,29 +1,10 @@
-<?php
-
-namespace Omnipay\Moip\Message;
+<?php namespace Omnipay\Moip\Message;
 
 
 class CreateOrderRequest extends CreateCustomerRequest
 {
-    /**
-     * Set client Id
-     *
-     * @param string $ownId
-     */
-    public function setOrderOwnId($ownId)
-    {
-        $this->setParameter('orderOwnId', $ownId);
-    }
+    protected $resource = 'orders';
 
-    /**
-     * Get client Id
-     *
-     * @return string $ownId
-     */
-    public function getOrderOwnId()
-    {
-        return $this->getParameter('orderOwnId');
-    }
 
     /**
      * Get the raw data array for this message. The format of this varies from gateway to
@@ -35,14 +16,17 @@ class CreateOrderRequest extends CreateCustomerRequest
      */
     public function getData()
     {
-        /** @var \Omnipay\Common\Item $item */
-
-        $this->validate('amount', 'currency', 'items');
+        $this->validate('amount', 'currency', 'items', 'orderOwnId', 'customerReference', 'shipping_price');
 
         $data = [
             'ownId'    => $this->getOrderOwnId(),
             'amount'   => [
-                'currency' => $this->getCurrency()
+                'currency' => $this->getCurrency(),
+                'subtotals' => [
+                    'shipping' => (int)($this->getShippingPrice()*100.0),
+                    'addition' => 0,
+                    'discount' => 0,
+                ]
             ],
             'items'    => [],
             'customer' => []
@@ -64,8 +48,8 @@ class CreateOrderRequest extends CreateCustomerRequest
                 $dataItem = [
                     'product'  => $item->getName(),
                     'quantity' => $item->getQuantity(),
-                    'detail'   => $item->getDescription(),
-                    'price'    => $item->getPrice()
+                    'detail'   => "",//$item->getDescription(),
+                    'price'    => (int)($item->getPrice()*100.0)
                 ];
                 $data['items'][] = $dataItem;
 
@@ -73,10 +57,5 @@ class CreateOrderRequest extends CreateCustomerRequest
         }
 
         return $data;
-    }
-
-    protected function getEndpoint()
-    {
-        return AbstractRequest::getEndpoint().'/orders';
     }
 }

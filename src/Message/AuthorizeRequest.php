@@ -1,32 +1,42 @@
-<?php
-
-namespace Omnipay\Moip\Message;
+<?php namespace Omnipay\Moip\Message;
 
 
 use Omnipay\Common\Message\ResponseInterface;
 
 class AuthorizeRequest extends AbstractRequest
 {
+    protected $resource = 'orders';
 
-    /**
-     * Get the raw data array for this message. The format of this varies from gateway to
-     * gateway, but will usually be either an associative array, or a SimpleXMLElement.
-     *
-     * @return mixed
-     */
     public function getData()
     {
-        // TODO: Implement getData() method.
+        $this->validate('customer', 'paymentType', 'order_id');
+
+        $data = [];
+        switch(strtolower($this->getPaymentType()))
+        {
+            case 'creditcard':
+                $data = $this->getDataCreditCard();
+                break;
+
+            case 'boleto':
+                $data = $this->getDataBoleto();
+                break;
+
+            case 'pix':
+                //$data = $this->getDataPix();
+                break;
+
+            default:
+                $data = $this->getDataCreditCard();
+        }
+
+        return $data;
     }
 
-    /**
-     * Send the request with specified data
-     *
-     * @param  mixed $data The data to send
-     * @return ResponseInterface
-     */
-    public function sendData($data)
+    protected function getEndpoint()//os pagamentos se referem a um pedido (order)
     {
-        // TODO: Implement sendData() method.
+        $endPoint = parent::getEndpoint();
+        return  "{$endPoint}/{$this->getOrderID()}/payments";
     }
+
 }
