@@ -25,7 +25,9 @@ class VoidRequest extends AbstractRequest   // está dando  erro para vendas com
     {
         $this->validate('transactionId');
         //$data = parent::getData();
-        $data = [];
+        $data = [
+            "amount" => $this->getAmountInteger()
+        ];
 
         return $data;
     }
@@ -43,11 +45,11 @@ class VoidRequest extends AbstractRequest   // está dando  erro para vendas com
 
         $headers = [
             'Content-Type' => 'application/json',
-            'Authorization' => 'Basic '.$this->encodeCredentials($this->getToken(), $this->getApiKey()),
-            //'Authorization' => 'OAuth '.$this->getAccessToken(),
+            //'Authorization' => 'Basic '.$this->encodeCredentials($this->getToken(), $this->getApiKey()),
+            'Authorization' => $this->getAuthorization(),
         ];
 
-        //print_r([$method, $url, $headers, json_encode($data)]);exit();
+        //print_r([$method, $url, $headers, json_encode($data)]);//exit();
         $response = $this->httpClient->request(
             $method,
             $url,

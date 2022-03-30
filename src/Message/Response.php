@@ -118,7 +118,7 @@ class Response extends AbstractResponse
     public function isVoided()
     {
         $status = @strtolower($this->getStatus());
-        return strcmp("cancelled", $status)==0 || strcmp("refunded", $status)==0;
+        return strcmp("cancelled", $status)==0 || strcmp("refunded", $status)==0 || strcmp("completed", $status)==0;
     }
 
     public function getCode()
@@ -148,14 +148,12 @@ class Response extends AbstractResponse
     {
         $data = $this->getData();
         $boleto = array();
-        $payment_id = @$data['payment_id'];
-        $endpoint = $this->getTestMode()?$this->testEndpoint:$this->liveEndpoint;
-        $boleto['boleto_url'] = "$endpoint/v1/payments/boleto/$payment_id/html";//@$data['boleto']['links'][0]['href']; //'https://api-sandbox.getnet.com.br/v1/payments/boleto/{payment_id}/html'
-        $boleto['boleto_url_pdf'] = "$endpoint/v1/payments/boleto/$payment_id/pdf";//@$data['boleto']['links'][0]['href'];  //'https://api-sandbox.getnet.com.br/v1/payments/boleto/{payment_id}/pdf'
-        $boleto['boleto_barcode'] = @$data['boleto']['typeful_line'];
-        $boleto['boleto_expiration_date'] = @$data['boleto']['expiration_date'];
-        $boleto['boleto_valor'] = (@$data['amount']*1.0)/100.0;
-        $boleto['boleto_transaction_id'] = @$data['boleto']['boleto_id'];//@$data['payment_id']
+        $boleto['boleto_url'] = @$data['_links']['payBoleto']['printHref'];
+        $boleto['boleto_url_pdf'] = @$data['_links']['payBoleto']['printHref'];
+        $boleto['boleto_barcode'] = @$data['fundingInstrument']['boleto']['lineCode'];
+        $boleto['boleto_expiration_date'] = @$data['fundingInstrument']['boleto']['expirationDate'];
+        $boleto['boleto_valor'] = (@$data['amount']['total']*1.0)/100.0;
+        $boleto['boleto_transaction_id'] = @$data['id'];
         //@$this->setTransactionReference(@$data['transaction_id']);
 
         return $boleto;
@@ -163,13 +161,6 @@ class Response extends AbstractResponse
 
     public function getPix()
     {
-        $data = $this->getData();
-        $pix = array();
-        $pix['pix_qrcodebase64image'] = $this->createPixImg(@$data['additional_data']['qr_code']);
-        $pix['pix_qrcodestring'] = @$data['additional_data']['qr_code'];
-        $pix['pix_valor'] = NULL;//(@$data['amount']*1.0)/100.0;
-        $pix['pix_transaction_id'] = @$data['payment_id'];
-
-        return $pix;
+        return [];
     }
 }

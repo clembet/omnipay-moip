@@ -12,6 +12,7 @@ class CaptureRequest extends AbstractRequest
         //$data = parent::getData();
 
         $data = [
+            //"amount"=>$this->getAmountInteger()
         ];
 
         return $data;
@@ -31,10 +32,10 @@ class CaptureRequest extends AbstractRequest
         $headers = [
             'Content-Type' => 'application/json',
             //'Authorization' => 'Basic '.$this->encodeCredentials($this->getToken(), $this->getApiKey()),
-            'Authorization' => 'OAuth '.$this->getAccessToken(),
+            'Authorization' => $this->getAuthorization(),
         ];
 
-        //print_r([$method, $url, $headers, json_encode($data)]);exit();
+        //print_r([$method, $url, $headers, json_encode($data)]);//exit();
         $response = $this->httpClient->request(
             $method,
             $url,

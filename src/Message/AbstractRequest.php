@@ -6,17 +6,6 @@ use Exception;
 
 abstract class AbstractRequest extends \Omnipay\Common\Message\AbstractRequest
 {
-    protected $pubKey = '-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjp6zfhT4b7oIfGVW55Lp
-YzedLAcSD0DJ5Muk1udi3D1VLCemKcKzL0CkVHOMCwmrygP7nnOXRONEpqK/PGHj
-ocoV/YvHjmA4tPe0l77xDjpigJWf2FDDRJuXRuU2mKoM+2rmXrazk5UEJrIbGpIK
-J42XEBkVtSaxmD/5cKGnH+icY09Gt9i8ljOys96fjZYEnktaHirwX66gWGyjRZ9Z
-N+MbsmjWCeAjqLCvsWvF2jGTbRDkwW7qZtoOLFfCF/DTDRWYrgVX3a9HL+PPec2r
-Gp+TKdMhAz4IkqiSXiw6+eYpSAfvevhg7CC7UYeb427wFYAhExFtx+d+JhCA70yM
-twIDAQAB
------END PUBLIC KEY-----';
-
-
     protected $liveEndpoint = 'https://api.moip.com.br';
     protected $testEndpoint = 'https://sandbox.moip.com.br';  //https://sandbox-tls.moip.com.br (v1)
     protected $version = 2;
@@ -54,6 +43,28 @@ twIDAQAB
         return $this->getParameter('apiKey');
     }
 
+    function getPubKey()
+    {
+        $pubKey = $this->getParameter('pubKey');
+        if($pubKey)
+            return $pubKey;
+
+        return '-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjp6zfhT4b7oIfGVW55Lp
+YzedLAcSD0DJ5Muk1udi3D1VLCemKcKzL0CkVHOMCwmrygP7nnOXRONEpqK/PGHj
+ocoV/YvHjmA4tPe0l77xDjpigJWf2FDDRJuXRuU2mKoM+2rmXrazk5UEJrIbGpIK
+J42XEBkVtSaxmD/5cKGnH+icY09Gt9i8ljOys96fjZYEnktaHirwX66gWGyjRZ9Z
+N+MbsmjWCeAjqLCvsWvF2jGTbRDkwW7qZtoOLFfCF/DTDRWYrgVX3a9HL+PPec2r
+Gp+TKdMhAz4IkqiSXiw6+eYpSAfvevhg7CC7UYeb427wFYAhExFtx+d+JhCA70yM
+twIDAQAB
+-----END PUBLIC KEY-----';
+    }
+
+    function setPubKey($key)
+    {
+        $this->setParameter('pubKey', $key);
+    }
+
     public function getData()
     {
         $this->validate('token', 'apiKey');
@@ -74,7 +85,7 @@ twIDAQAB
 
     public function sendData($data)
     {
-        $this->validate('authorization');
+        $this->validate('token', 'apiKey');
         $method = $this->requestMethod;
         $url = $this->getEndpoint();
 
@@ -123,7 +134,7 @@ twIDAQAB
         return $this->requestMethod = $value;
     }
 
-    public function setAccessToken($value)
+    /*public function setAccessToken($value)
     {
         return $this->setParameter('accessToken', $value);
     }
@@ -136,11 +147,13 @@ twIDAQAB
     public function setAuthorization($value)
     {
         return $this->setParameter('authorization', $value);
-    }
+    }*/
 
     public function getAuthorization()
     {
-        return $this->getParameter('authorization');
+        $this->validate('token', 'apiKey');
+        //return $this->getParameter('authorization');
+        return 'Basic '.$this->encodeCredentials($this->getToken(), $this->getApiKey());
     }
 
     public function encodeCredentials($token, $appKey)
@@ -431,6 +444,7 @@ twIDAQAB
         $data = [
             "installmentCount"=>$this->getInstallments(),
             "statementDescriptor"=>$this->getSoftDescriptor(),
+            "delayCapture" => true,
             "fundingInstrument"=>[
                 "method"=>"CREDIT_CARD",
                 "creditCard"=>[

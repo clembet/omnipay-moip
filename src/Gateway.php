@@ -16,16 +16,6 @@ use Omnipay\Common\Message\RequestInterface;
  */
 class Gateway extends AbstractGateway
 {
-    protected $pubKey = '-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjp6zfhT4b7oIfGVW55Lp
-YzedLAcSD0DJ5Muk1udi3D1VLCemKcKzL0CkVHOMCwmrygP7nnOXRONEpqK/PGHj
-ocoV/YvHjmA4tPe0l77xDjpigJWf2FDDRJuXRuU2mKoM+2rmXrazk5UEJrIbGpIK
-J42XEBkVtSaxmD/5cKGnH+icY09Gt9i8ljOys96fjZYEnktaHirwX66gWGyjRZ9Z
-N+MbsmjWCeAjqLCvsWvF2jGTbRDkwW7qZtoOLFfCF/DTDRWYrgVX3a9HL+PPec2r
-Gp+TKdMhAz4IkqiSXiw6+eYpSAfvevhg7CC7UYeb427wFYAhExFtx+d+JhCA70yM
-twIDAQAB
------END PUBLIC KEY-----';
-
     public function getDefaultParameters()
     {
         return [
@@ -87,7 +77,7 @@ twIDAQAB
         return $this->getParameter('apiKey');
     }
 
-    public function setAccessToken($value)
+    /*public function setAccessToken($value)
     {
         return $this->setParameter('accessToken', $value);
     }
@@ -105,7 +95,7 @@ twIDAQAB
     public function getAuthorization()
     {
         return $this->getParameter('authorization');
-    }
+    }*/
 
     /**
      * Set client Id
@@ -239,6 +229,23 @@ twIDAQAB
 
     function getPubKey()
     {
-        return $this->pubKey;
+        $pubKey = $this->getParameter('pubKey');
+        if($pubKey)
+            return $pubKey;
+
+        return '-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjp6zfhT4b7oIfGVW55Lp
+YzedLAcSD0DJ5Muk1udi3D1VLCemKcKzL0CkVHOMCwmrygP7nnOXRONEpqK/PGHj
+ocoV/YvHjmA4tPe0l77xDjpigJWf2FDDRJuXRuU2mKoM+2rmXrazk5UEJrIbGpIK
+J42XEBkVtSaxmD/5cKGnH+icY09Gt9i8ljOys96fjZYEnktaHirwX66gWGyjRZ9Z
+N+MbsmjWCeAjqLCvsWvF2jGTbRDkwW7qZtoOLFfCF/DTDRWYrgVX3a9HL+PPec2r
+Gp+TKdMhAz4IkqiSXiw6+eYpSAfvevhg7CC7UYeb427wFYAhExFtx+d+JhCA70yM
+twIDAQAB
+-----END PUBLIC KEY-----';
+    }
+
+    function setPubKey($key)
+    {
+        $this->setParameter('pubKey', $key);
     }
 }
