@@ -12,8 +12,7 @@
     "homepage": "https://github.com/clembet/omnipay-moip",
     "require": {
         "php": ">=7.0",
-        "clembet/omnipay-common": "^3.0",
-        "moip/moip-sdk-php": "^3.1"
+        "clembet/omnipay-common": "^3.0"
     },
     "require-dev": {
         "clembet/omnipay-tests": "~3.0"
