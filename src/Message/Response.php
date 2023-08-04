@@ -140,7 +140,12 @@ class Response extends AbstractResponse
      */
     public function getMessage()
     {
-        return $this->getCode()." - ".$this->getErrors();
+        $erros = $this->getErrors();
+        $erroMsg = "";
+        if(is_array($erros)){
+            $erroMsg = 'Erro '.$erros[0]['code'].' - '.$erros[0]['description'];
+        }
+        return $this->getCode()." - ".$erroMsg;
 
     }
 
